@@ -8,6 +8,6 @@ Le projet [Vixen Shell](https://github.com/vixen-shell) représente une initiati
 
 ## API pour la communication entre interfaces et système
 
-Ce projet est une composante essentiel du back-end de [Vixen Shell](https://github.com/vixen-shell), il implémente une API développée en python avec la librairie fastAPI permettant aux front-end de [Vixen Shell](https://github.com/vixen-shell) de communiquer avec [Hyprland](https://github.com/hyprwm/Hyprland) (window manager) ainsi qu'avec linux. Nous avons notamment la possibilité grâce à cette API de récupérer le flux d'évènements provenant du socket UNIX d'[Hyprland](https://github.com/hyprwm/Hyprland) via un WebSocket.
+Ce projet est une composante essentiel du back-end de Vixen Shell, il implémente une API développée en python avec la librairie fastAPI permettant aux front-end de Vixen Shell de communiquer avec Hyprland (window manager) ainsi qu'avec linux. Nous avons notamment la possibilité grâce à cette API de récupérer le flux d'évènements provenant du socket UNIX d'Hyprland via un WebSocket.
 
 > **Note :** C'est un projet de développement qui vient tout juste de franchir sa phase proof of concept et se trouve encore en version alpha.

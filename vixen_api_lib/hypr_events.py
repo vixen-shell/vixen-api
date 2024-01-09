@@ -1,5 +1,6 @@
 import os
 from typing import List
+from .utils import UnixSocket
 
 HYPR_SOCKET_PATH = "/tmp/hypr/{}/.socket2.sock".format(os.getenv('HYPRLAND_INSTANCE_SIGNATURE'))
 
@@ -28,8 +29,8 @@ data_map = {
     'windowtitle': ['window_address'],
 }
 
-class SocketDataHandler:
-    def __init__(self, data_bytes: bytes):
+class HyprSocketDataHandler:
+    def __init__(self, data_bytes: bytes) -> None:
         id, data = self._extract_data(data_bytes)
         self._id = id
         self._data = self._name_data(data)

@@ -1,0 +1,4 @@
+#!/home/noha/Workflow/vixen-shell/vixen-api/.venv/bin/python
+
+from vixen_api_lib import api
+api.run()

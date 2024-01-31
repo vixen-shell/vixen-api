@@ -19,8 +19,8 @@ api = FastAPI()
 from . import hypr_endpoints
 # from . import static_endpoints
 
-HOST = '127.0.0.1'
-PORT = 8420
+HOST = 'localhost'
+PORT = 6481
 
 def run():
     uvicorn.run(api, host=HOST, port=PORT)

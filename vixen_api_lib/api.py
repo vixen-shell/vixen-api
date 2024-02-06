@@ -2,12 +2,13 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from .features import start_active_features
+from .features import start_default_features
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    start_active_features()
+    start_default_features()
     yield
+    print('Close Vixen Api !!!')
 
 api = FastAPI(lifespan=lifespan)
 

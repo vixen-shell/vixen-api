@@ -1,8 +1,12 @@
 import os, subprocess, json
-from typing import Dict, List, Literal
+from typing import Dict, List, Literal, TypedDict, Optional
 from fastapi import HTTPException
 
 home_directory = os.path.expanduser('~')
+
+class EventObject(TypedDict):
+    id: Literal['close_client']
+    data: Optional[Dict]
 
 def open_client(feature_name: str, client_id: str) -> bool:
     if not os.path.exists(f'{home_directory}/.config/vixen/{feature_name}.json'):

@@ -1,5 +1,5 @@
 from .api import api, server
-from .clients import clients_handler
+from .clients import clients_handler, EventObject
 from typing import Dict, List
 from fastapi import HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
@@ -20,7 +20,8 @@ async def close_client(client_id: str):
             detail = f"Bad client id!"
         )
     else:
-        await websocket.send_text('close-event')
+        event: EventObject = {'id': 'close_client'}
+        await websocket.send_json(event)
         return JSONResponse({'message': f"Client '{client_id}' closed"})
 
 @api.get('/client/{feature_name}/ids')
@@ -100,23 +101,24 @@ async def websocket_feature_client(current_websocket: WebSocket, client_id: str,
 
     try:
         while True:
-            data = await current_websocket.receive_text()
+            event: EventObject = await current_websocket.receive_json()
 
-            if data == 'close-event':
+            if event['id'] == 'close_client':
                 if client:
                     clients_handler.unsubscribe(client_id)
-                    await current_websocket.send_text(data)
+                    await current_websocket.send_json(event)
                     break
             else:
                 # Diffusez le message à toutes les connexions du même client_id
-                message = f"Message text from client {client_id}: {data}"
+                message = f"Message text from client {client_id}: {event}"
 
                 if not client:
                     await client_websockets.client_websockets[client_id].send_text(message)
 
-                for websocket in client_websockets.connected_websockets[client_id]:
-                    if websocket != current_websocket:  # Ne pas envoyer le message à l'expéditeur d'origine
-                        await websocket.send_text(message)
+                if client_id in client_websockets.connected_websockets:
+                    for websocket in client_websockets.connected_websockets[client_id]:
+                        if websocket != current_websocket:  # Ne pas envoyer le message à l'expéditeur d'origine
+                            await websocket.send_text(message)
 
     except WebSocketDisconnect as e:
         if server.should_exit: pass

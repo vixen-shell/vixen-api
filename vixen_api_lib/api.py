@@ -1,25 +1,24 @@
 import uvicorn
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from .features import start_default_features
+from .clients import start_default_clients
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    start_default_features()
+    start_default_clients()
     yield
-    print('Close Vixen Api !!!')
 
 api = FastAPI(lifespan=lifespan)
+config = uvicorn.Config(api, host='localhost', port=6481)
+server = uvicorn.Server(config)
 
 from . import hypr_endpoints
-from . import features_endpoints
-
-HOST = 'localhost'
-PORT = 6481
+from . import clients_endpoints
 
 def run():
-    uvicorn.run(api, host=HOST, port=PORT)
+    server.run()
+
+# from fastapi.middleware.cors import CORSMiddleware
 
 # origins = [
 #     "http://localhost:4173"

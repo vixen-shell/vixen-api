@@ -1,15 +1,12 @@
 import os, subprocess, json
-from typing import Dict, List, Literal, TypedDict, Optional
+from typing import Dict, List, Literal
 from fastapi import HTTPException
-
-home_directory = os.path.expanduser('~')
-
-class EventObject(TypedDict):
-    id: Literal['close_client']
-    data: Optional[Dict]
+from .client_events import ClientEventObject
+from .constants import HOME_DIRECTORY
+from .client_sockets_handler import client_sockets_handler
 
 def open_client(feature_name: str, client_id: str) -> bool:
-    if not os.path.exists(f'{home_directory}/.config/vixen/{feature_name}.json'):
+    if not os.path.exists(f'{HOME_DIRECTORY}/.config/vixen/{feature_name}.json'):
         return False
     
     cmd = f'vx-client -f {feature_name} -i {client_id} &'
@@ -60,7 +57,7 @@ class ClientsHandler:
 
     def open(self, feature_name: str) -> Dict | None:
         error = None
-        instance_mode = self._get_instance_mode(f'{home_directory}/.config/vixen/{feature_name}.json')
+        instance_mode = self._get_instance_mode(f'{HOME_DIRECTORY}/.config/vixen/{feature_name}.json')
 
         if isinstance(instance_mode, HTTPException): error = instance_mode
         else: single_instance = instance_mode
@@ -72,7 +69,10 @@ class ClientsHandler:
             if open_client(feature_name, client_id):
                 self._subscribe(feature_name, client_id)
             else:
-                return {'error': "Open feature failed!"}
+                return HTTPException(
+                    status_code = 400,
+                    detail = f"Open '{feature_name}' feature failed!"
+                )
 
         if not error:           
             if not single_instance:
@@ -92,6 +92,23 @@ class ClientsHandler:
             'client_id': client_id
         } if not error else error
     
+    async def close(self, client_id: str):
+        error = None
+        websocket = client_sockets_handler.client_websockets.get(client_id)
+
+        if not websocket:
+            error = HTTPException(
+                        status_code = 404,
+                        detail = f"Bad client id!"
+                    )
+        if not error:
+            event: ClientEventObject = {'id': 'close_client'}
+            await websocket.send_json(event)
+
+        return {
+            'message': f"Client '{client_id}' closed"
+        } if not error else error
+    
     def unsubscribe(self, client_id: str):
         feature_name = client_id.split('_')[0]
         self.clients[feature_name].remove(client_id)
@@ -109,10 +126,8 @@ class ClientsHandler:
             ids.extend(self.clients[feature])
         return ids if ids else None
 
-clients_handler = ClientsHandler()
-
 def start_default_clients():
-    default_features_file_path = f'{home_directory}/.config/vixen/default_features.json'
+    default_features_file_path = f'{HOME_DIRECTORY}/.config/vixen/default_features.json'
 
     if os.path.exists(default_features_file_path):
         with open(default_features_file_path, 'r') as file:
@@ -120,3 +135,5 @@ def start_default_clients():
 
         for feature in active_features:
             clients_handler.open(feature)
+
+clients_handler = ClientsHandler()

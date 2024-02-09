@@ -1,7 +1,7 @@
 from fastapi import WebSocket
 from .api import api
 from .hypr_events import HYPR_SOCKET_PATH, HyprSocketDataHandler
-from .utils import UnixSocket
+from .unix_socket import UnixSocket
 
 @api.websocket("/hypr/events")
 async def websocket_hypr_events(websocket: WebSocket):

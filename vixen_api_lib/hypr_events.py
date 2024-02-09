@@ -1,6 +1,5 @@
 import os
 from typing import List
-from .utils import UnixSocket
 
 HYPR_SOCKET_PATH = "/tmp/hypr/{}/.socket2.sock".format(os.getenv('HYPRLAND_INSTANCE_SIGNATURE'))
 

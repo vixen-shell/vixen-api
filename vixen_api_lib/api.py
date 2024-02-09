@@ -1,7 +1,7 @@
-import uvicorn
+import uvicorn, asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from .clients import start_default_clients
+from .clients_handler import start_default_clients
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
@@ -12,8 +12,12 @@ api = FastAPI(lifespan=lifespan)
 config = uvicorn.Config(api, host='localhost', port=6481)
 server = uvicorn.Server(config)
 
-from . import hypr_endpoints
+# ENDPOINTS
 from . import clients_endpoints
+
+# WEBSOCKETS
+from . import clients_websockets
+from . import hypr_websockets
 
 def run():
     server.run()

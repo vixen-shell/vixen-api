@@ -1,22 +1,12 @@
-import os, subprocess, json
+import json
 from typing import Dict, List, Literal
 from fastapi import HTTPException
-from .client_events import ClientEventObject
-from .constants import HOME_DIRECTORY
-from .client_sockets_handler import client_sockets_handler
+from .base import open_feature_client
+from .globals import feature_client_connections
+from .feature_client_event_objects import FeatureClientEventObject
+from ..constants import VX_CONFIG_DIRECTORY
 
-def open_client(feature_name: str, client_id: str) -> bool:
-    if not os.path.exists(f'{HOME_DIRECTORY}/.config/vixen/{feature_name}.json'):
-        return False
-    
-    cmd = f'vx-client -f {feature_name} -i {client_id} &'
-    try:
-        subprocess.run(cmd, shell=True, check=True)
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-class ClientsHandler:
+class FeatureClients:
     def __init__(self) -> None:
         self.clients: Dict[str, List[str]] = {}
         self.client_ids: Dict[str, List[int]] = {}
@@ -57,7 +47,7 @@ class ClientsHandler:
 
     def open(self, feature_name: str) -> Dict | None:
         error = None
-        instance_mode = self._get_instance_mode(f'{HOME_DIRECTORY}/.config/vixen/{feature_name}.json')
+        instance_mode = self._get_instance_mode(f'{VX_CONFIG_DIRECTORY}/{feature_name}.json')
 
         if isinstance(instance_mode, HTTPException): error = instance_mode
         else: single_instance = instance_mode
@@ -65,8 +55,8 @@ class ClientsHandler:
         client_state: Literal['created', 'existing'] = 'created'
         client_id: str | None = None
         
-        def open_feature_client(client_id: str):
-            if open_client(feature_name, client_id):
+        def open_client(client_id: str):
+            if open_feature_client(feature_name, client_id):
                 self._subscribe(feature_name, client_id)
             else:
                 return HTTPException(
@@ -77,11 +67,11 @@ class ClientsHandler:
         if not error:           
             if not single_instance:
                 client_id = self._new_client_id(feature_name)
-                error = open_feature_client(client_id)
+                error = open_client(client_id)
             else:
                 if not feature_name in self.clients:
                     client_id = self._new_client_id(feature_name)
-                    error = open_feature_client(client_id)
+                    error = open_client(client_id)
                 else:
                     client_state = 'existing'
                     client_id = self.clients[feature_name][0]
@@ -94,7 +84,7 @@ class ClientsHandler:
     
     async def close(self, client_id: str):
         error = None
-        websocket = client_sockets_handler.client_websockets.get(client_id)
+        websocket = feature_client_connections.main_clients.get(client_id)
 
         if not websocket:
             error = HTTPException(
@@ -102,7 +92,7 @@ class ClientsHandler:
                         detail = f"Bad client id!"
                     )
         if not error:
-            event: ClientEventObject = {'id': 'close_client'}
+            event: FeatureClientEventObject = {'id': 'close_client'}
             await websocket.send_json(event)
 
         return {
@@ -125,15 +115,3 @@ class ClientsHandler:
         for feature in self.clients:
             ids.extend(self.clients[feature])
         return ids if ids else None
-
-def start_default_clients():
-    default_features_file_path = f'{HOME_DIRECTORY}/.config/vixen/default_features.json'
-
-    if os.path.exists(default_features_file_path):
-        with open(default_features_file_path, 'r') as file:
-            active_features = json.load(file)
-
-        for feature in active_features:
-            clients_handler.open(feature)
-
-clients_handler = ClientsHandler()

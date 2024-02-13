@@ -1,11 +1,11 @@
 import uvicorn, asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from .clients_handler import start_default_clients
+from .feature_clients import start_default_feature_clients
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    start_default_clients()
+    start_default_feature_clients()
     yield
 
 api = FastAPI(lifespan=lifespan)

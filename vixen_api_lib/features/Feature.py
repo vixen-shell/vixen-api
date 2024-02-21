@@ -17,6 +17,10 @@ class SingleFrameHandler:
 
         GLib.idle_add(add_frames)
 
+    def __del__(self):
+        ids = list(self.frames.keys())
+        for id in ids: self.frames[id].close()
+
     def show(self, id: str):
         if id in self.frames:
             frame = self.frames[id]
@@ -46,6 +50,10 @@ class InstanceFrameHandler:
         self.frame_settings = frame_settings.instance_frame_settings
         self.frames: Dict[str, Gtk.Window] = {}
         self.last_frame_indexes: Dict[str, int] = {}
+
+    def __del__(self):
+        ids = list(self.frames.keys())
+        for id in ids: self.frames[id].close()
 
     def count_frame_indexes(self, frame_id: str):
         return sum(1 for key in self.frames if key.startswith(frame_id))

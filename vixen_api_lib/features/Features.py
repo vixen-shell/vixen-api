@@ -8,10 +8,15 @@ class Features:
     def open(feature_name: str):
         Features._features[feature_name] = Feature(feature_name)
 
-    # @staticmethod
-    # def close(feature_name: str):
-    #     Features._features[feature_name].destroy_frames()
-    #     del Features._features[feature_name]
+    @staticmethod
+    def close(feature_name: str):
+        del Features._features[feature_name]
+
+    @staticmethod
+    def close_all():
+        feature_names = list(Features._features.keys())
+        for feature_name in feature_names:
+            Features.close(feature_name)
 
     @staticmethod
     def get_feature(feature_name: str):

@@ -2,12 +2,13 @@ import uvicorn, asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from .features import Gtk_main_loop
+from .features import Gtk_main_loop, Features
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
     Gtk_main_loop.run()
     yield
+    Features.close_all()
     Gtk_main_loop.quit()
 
 api = FastAPI(lifespan=lifespan)

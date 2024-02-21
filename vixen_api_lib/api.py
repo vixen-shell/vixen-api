@@ -1,22 +1,24 @@
 import uvicorn, asyncio
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from .feature_clients import start_default_feature_clients
+
+from .features import Gtk_main_loop
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    start_default_feature_clients()
+    Gtk_main_loop.run()
     yield
+    Gtk_main_loop.quit()
 
 api = FastAPI(lifespan=lifespan)
 config = uvicorn.Config(api, host='localhost', port=6481)
 server = uvicorn.Server(config)
 
 # ENDPOINTS
-from . import clients_endpoints
+from . import features_endpoints
+from . import frames_endpoints
 
 # WEBSOCKETS
-from . import clients_websockets
 from . import hypr_websockets
 
 def run():

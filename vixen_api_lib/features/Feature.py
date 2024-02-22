@@ -66,7 +66,7 @@ class InstanceFrameHandler:
         return self.last_frame_indexes.get(frame_id, -1) + 1
 
 
-    def open(self, frame_id: str):
+    def open(self, frame_id: str) -> (str | None):
         frame_index = self.new_frame_index(frame_id)
         indexed_frame_id = f'{frame_id}_{frame_index}'
 
@@ -86,6 +86,7 @@ class InstanceFrameHandler:
                 self.frames[indexed_frame_id] = frame
 
             GLib.idle_add(process)
+            return indexed_frame_id
 
     def close(self, id: str):
         if id in self.frames:
@@ -104,12 +105,12 @@ class FrameHandler:
         self.single_frames = SingleFrameHandler(frame_settings)
         self.instance_frames = InstanceFrameHandler(frame_settings)
 
-    def open(self, id: str):
+    def open(self, id: str) -> (str | None):
         if id in self.single_frames.frame_ids:
             self.single_frames.show(id)
 
         if id in self.instance_frames.frame_ids:
-            self.instance_frames.open(id)
+            return self.instance_frames.open(id)
 
     def close(self, id: str):
         if id in self.single_frames.active_frame_ids:
@@ -134,7 +135,10 @@ class Feature:
         self.setting = FeatureSetting(feature_data)
         self.frames = FrameHandler(self.setting.frames)
 
-    def open_frame(self, id: str): self.frames.open(id)
+    def open_frame(self, id: str):
+        frame_id = self.frames.open(id)
+        return frame_id if frame_id else id
+    
     def close_frame(self, id: str): self.frames.close(id)
 
     @property

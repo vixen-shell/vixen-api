@@ -1,74 +1,76 @@
 from fastapi import Response, Path
-from pydantic import BaseModel
 from .api import api
+from .globals import State_Response
 from .features import Features
-
-class OpenCloseResponse(BaseModel):
-    key: str
-    status: str
-
-class FileNotFoundErrorResponse(BaseModel):
-    message: str
-    error: str
-    filename: str
-
-class KeyErrorResponse(BaseModel):
-    message: str
-    error: str
-    key: str
+from .features_models import Models
+from .shared_models import SharedModels
 
 @api.get(
-        '/feature/{feature_name}/open',
+        '/feature/load/{feature_name}',
         description = 'Load a feature',
         responses = {
-            200: {'model': OpenCloseResponse},
-            404: {'model': FileNotFoundErrorResponse}
+            200: {'model': Models.FeatureState},
+            404: {'model': Models.FileNotFoundError},
+            409: {'model': SharedModels.KeyError},
         }
 )
-async def open_feature(
+async def load_feature(
     response: Response,
     feature_name: str = Path(description = 'Feature name'),
 ):
     try:
-        Features.open(feature_name)
-
-        return OpenCloseResponse(
-            key = feature_name,
-            status = 'open'
-        )
+        if not Features.key_exists(feature_name):
+            Features.load(feature_name)
+            
+            return State_Response(response, 200)(
+                Models.FeatureState(
+                    frame_name = feature_name,
+                    is_loaded = True
+                )
+            )
+        else:
+            return State_Response(response, 409)(
+                SharedModels.KeyError(
+                    message = f"Feature '{feature_name}' is already loaded",
+                    error = 'KeyExists',
+                    key = feature_name
+                )
+            )
     except FileNotFoundError as error:
-        response.status_code = 404
-
-        return FileNotFoundErrorResponse(
-            message = f"Feature '{feature_name}' not found",
-            error = error.strerror,
-            filename = error.filename
+        return State_Response(response, 404)(
+            Models.FileNotFoundError(
+                message = f"Feature '{feature_name}' is not found",
+                error = 'FileNotFound',
+                filename = error.filename
+            )
         )
 
 @api.get(
-        '/feature/{feature_name}/close',
+        '/feature/unload/{feature_name}',
         description = 'Unload a feature',
         responses = {
-            200: {'model': OpenCloseResponse},
-            404: {'model': KeyErrorResponse}
+            200: {'model': Models.FeatureState},
+            404: {'model': SharedModels.KeyError}
         }
 )
-async def close_feature(
+async def unload_feature(
     response: Response,
     feature_name: str = Path(description = 'Feature name')
 ):
-    try:
-        Features.close(feature_name)
+    if Features.key_exists(feature_name):
+        Features.unload(feature_name)
 
-        return OpenCloseResponse(
-            key = feature_name,
-            status = 'close'
+        return State_Response(response, 200)(
+            Models.FeatureState(
+                frame_name = feature_name,
+                is_loaded = False
+            )
         )
-    except KeyError as error:
-        response.status_code = 404
-
-        return KeyErrorResponse(
-            message = f"Feature '{feature_name}' not open",
-            error = 'KeyError',
-            key = str(error).strip("'")
+    else:
+        return State_Response(response, 404)(
+            SharedModels.KeyError(
+                message = f"Feature '{feature_name}' is not loaded",
+                error = 'KeyError',
+                key = feature_name
+            )
         )

@@ -8,7 +8,7 @@ from .features import Gtk_main_loop, Features
 async def lifespan(api: FastAPI):
     Gtk_main_loop.run()
     yield
-    Features.close_all()
+    Features.unload_all()
     Gtk_main_loop.quit()
 
 api = FastAPI(lifespan=lifespan)

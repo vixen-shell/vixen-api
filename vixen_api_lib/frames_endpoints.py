@@ -1,49 +1,59 @@
 from fastapi import Response, Path
 from .api import api
-from .globals import State_Response
+from .globals import ModelResponses, CommonsModels, FeatureModels, FrameModels
 from .features import Features
-from .frames_models import Models
-from .shared_models import SharedModels
 
 # Frame IDs
+ids_responses = ModelResponses({
+    200: FrameModels.FrameIds,
+    404: CommonsModels.Error,
+    409: CommonsModels.Error
+})
+
 @api.get(
         '/frames/{feature_name}/ids',
         description = 'Get the frame IDs of a feature',
-        responses = {
-            200: {'model': Models.FrameIds},
-            404: {'model': SharedModels.KeyError},
-        }
+        responses = ids_responses.responses
 )
 async def frame_ids(
     response: Response,
     feature_name: str = Path(description = 'Feature name'),
 ):
-    if Features.key_exists(feature_name):
-        feature = Features.get(feature_name)
-
-        return State_Response(response, 200)(
-            Models.FrameIds(
-                frame_ids = feature.frame_ids,
-                active_frame_ids = feature.active_frame_ids
-            )
-        )
-    else:
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Feature '{feature_name}' is not loaded",
-                error = 'KeyError',
+    if not Features.key_exists(feature_name):
+        return ids_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
                 key = feature_name
             )
         )
+    
+    feature = Features.get(feature_name)
+
+    if not feature.is_started:
+        return ids_responses(response, 409)(
+            message = f"Feature '{feature_name}' is not started",
+            details = FeatureModels.FeatureBase(
+                name = feature_name,
+                is_started = False
+            )
+        )
+
+    return ids_responses(response, 200)(
+        ids = feature.frame_ids,
+        actives = feature.active_frame_ids
+    )
 
 # Toggle Frame
+toggle_responses = ModelResponses({
+    200: FrameModels.FrameProperty,
+    404: CommonsModels.Error,
+    409: CommonsModels.Error
+})
+
 @api.get(
         '/frame/{feature_name}/toggle/{frame_id}',
         description = 'Open or close a frame',
-        responses = {
-            200: {'model': Models.FrameState},
-            404: {'model': SharedModels.KeyError}
-        }
+        responses = toggle_responses.responses
 )
 async def toggle_frame(
     response: Response,
@@ -51,15 +61,23 @@ async def toggle_frame(
     frame_id: str = Path(description = 'Frame id')
 ):
     if not Features.key_exists(feature_name):
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Feature '{feature_name}' is not loaded",
-                error = 'KeyError',
+        return toggle_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
                 key = feature_name
             )
         )
 
     feature = Features.get(feature_name)
+
+    if not feature.is_started:
+        return toggle_responses(response, 409)(
+            message = f"Feature '{feature_name}' is not started",
+            details = FeatureModels.FeatureBase(
+                name = feature_name,
+                is_started = False
+            )
+        )
 
     if frame_id in feature.active_frame_ids:
         feature.close_frame(frame_id)
@@ -68,31 +86,32 @@ async def toggle_frame(
         frame_id = feature.open_frame(frame_id)
         frame_opened = True
     else:
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Frame ID '{frame_id}' does not exist",
-                error = 'KeyError',
+        return toggle_responses(response, 404)(
+            message = f"Frame ID '{frame_id}' does not exist",
+            details = CommonsModels.KeyError(
                 key = frame_id
             )
         )
 
-    return State_Response(response, 200)(
-        Models.FrameState(
-            feature_name = feature_name,
-            frame_id = frame_id,
-            frame_opened = frame_opened
+    return toggle_responses(response, 200)(
+        id = frame_id,
+        is_opened = frame_opened,
+        feature = FeatureModels.FeatureBase(
+            name = feature_name
         )
     )
 
 # Open Frame
+open_responses = ModelResponses({
+    200: FrameModels.FrameProperty,
+    404: CommonsModels.Error,
+    409: CommonsModels.Error
+})
+
 @api.get(
         '/frame/{feature_name}/open/{frame_id}',
         description = 'Open a frame',
-        responses = {
-            200: {'model': Models.FrameState},
-            404: {'model': SharedModels.KeyError},
-            409: {'model': SharedModels.KeyError}
-        }
+        responses = open_responses.responses
 )
 async def open_frame(
     response: Response,
@@ -100,52 +119,63 @@ async def open_frame(
     frame_id: str = Path(description = 'Frame id')
 ):
     if not Features.key_exists(feature_name):
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Feature '{feature_name}' is not loaded",
-                error = 'KeyError',
+        return open_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
                 key = feature_name
             )
         )
 
     feature = Features.get(feature_name)
 
+    if not feature.is_started:
+        return open_responses(response, 409)(
+            message = f"Feature '{feature_name}' is not started",
+            details = FeatureModels.FeatureBase(
+                name = feature_name,
+                is_started = False
+            )
+        )
+
     if frame_id in feature.active_frame_ids:
-        return State_Response(response, 409)(
-            SharedModels.KeyError(
-                message = f"Frame '{frame_id}' is already open",
-                error = 'KeyExists',
-                key = frame_id
+        return open_responses(response, 409)(
+            message = f"Frame '{frame_id}' is already open",
+            details = FrameModels.FrameProperty(
+                id = frame_id,
+                feature = FeatureModels.FeatureBase(
+                    name = feature_name
+                )
             )
         )
 
     if not frame_id in feature.frame_ids:
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Frame ID '{frame_id}' does not exist",
-                error = 'KeyError',
+        return open_responses(response, 404)(
+            message = f"Frame ID '{frame_id}' does not exist",
+            details = CommonsModels.KeyError(
                 key = frame_id
             )
         )
 
     frame_id = feature.open_frame(frame_id)
-    return State_Response(response, 200)(
-        Models.FrameState(
-            feature_name = feature_name,
-            frame_id = frame_id,
-            frame_opened = True
+
+    return open_responses(response, 200)(
+        id = frame_id,
+        feature = FeatureModels.FeatureBase(
+            name = feature_name
         )
     )
 
 # Close Frame
+close_responses = ModelResponses({
+    200: FrameModels.FrameProperty,
+    404: CommonsModels.Error,
+    409: CommonsModels.Error
+})
+
 @api.get(
         '/frame/{feature_name}/close/{frame_id}',
         description = 'Close a frame',
-        responses = {
-            200: {'model': Models.FrameState},
-            404: {'model': SharedModels.KeyError},
-            409: {'model': SharedModels.KeyError}
-        }
+        responses = close_responses.responses
 )
 async def open_frame(
     response: Response,
@@ -153,30 +183,43 @@ async def open_frame(
     frame_id: str = Path(description = 'Frame id')
 ):
     if not Features.key_exists(feature_name):
-        return State_Response(response, 404)(
-            SharedModels.KeyError(
-                message = f"Feature '{feature_name}' is not loaded",
-                error = 'KeyError',
+        return close_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
                 key = feature_name
             )
         )
 
     feature = Features.get(feature_name)
 
-    if not frame_id in feature.active_frame_ids:
-        return State_Response(response, 409)(
-            SharedModels.KeyError(
-                message = f"Frame '{frame_id}' is not open",
-                error = 'KeyError',
-                key = frame_id
+    if not feature.is_started:
+        return close_responses(response, 409)(
+            message = f"Feature '{feature_name}' is not started",
+            details = FeatureModels.FeatureBase(
+                name = feature_name,
+                is_started = False
             )
+        )
+
+    if not frame_id in feature.active_frame_ids:
+        return close_responses(response, 409)(
+            message = f"Frame '{frame_id}' is not open",
+            details = FrameModels.FrameProperty(
+                id = frame_id,
+                is_opened = False,
+                feature = FeatureModels.FeatureBase(
+                    name = feature_name
+                )
+            )
+
         )
     
     feature.close_frame(frame_id)
-    return State_Response(response, 200)(
-        Models.FrameState(
-            feature_name = feature_name,
-            frame_id = frame_id,
-            frame_opened = False
+
+    return close_responses(response, 200)(
+        id = frame_id,
+        is_opened = False,
+        feature = FeatureModels.FeatureBase(
+            name = feature_name
         )
     )

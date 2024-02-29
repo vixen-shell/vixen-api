@@ -1,5 +1,3 @@
-import json
-from functools import wraps
 from fastapi import WebSocket
 from typing import Dict, Literal, TypedDict, Optional, Any
 
@@ -17,86 +15,59 @@ class PipeEvent(EventObject):
     ]
 
 class ClientEvent(EventObject):
-    id: Literal['UPDATE_STATE']
+    id: Literal['GET_STATE', 'UPDATE_STATE']
     data: Optional[
         EventDataState
     ]
 
 class FeaturePipe:
-    def __init__(self, initial_state: Dict | None, setting_file_path: str):
-        self.is_open = False
-        self.setting_file_path = setting_file_path
-        self.client_websocket: Dict[str, WebSocket] = {}
-        self.feature_state = initial_state or {}
+    def __init__(self):
+        self.pipe_is_opened = False
+        self.client_websockets: Dict[str, WebSocket] = {}
 
     def open_pipe(self):
-        if not self.is_open:
-            self.is_open = True
+        if not self.pipe_is_opened:
+            self.pipe_is_opened = True
 
-    async def close_pipe(self, reason: str):
-        if self.is_open:
-            self.is_open = False
+    async def close_pipe(self):
+        if self.pipe_is_opened:
+            await self.disconnect_client('Pipe closed')
+            self.pipe_is_opened = False
 
-            ids = list(self.client_websocket.keys())
-            for id in ids:
-                await self.client_websocket[id].close(
-                    code = 1000,
-                    reason = reason
-                )
-
-            self.client_websocket = {}
-
-    async def connect_client(self, client_id: str, client_websocket: WebSocket):
-        if self.is_open:
-            if not client_id in self.client_websocket:
-                await client_websocket.accept()
-                self.client_websocket[client_id] = client_websocket
+    async def connect_client(self, client_id: str, websocket: WebSocket):
+        if not self.pipe_is_opened:
+            await websocket.close(
+                reason = 'Pipe is closed'
+            )
+            return False
+        
+        if client_id in self.client_websockets:
+            await websocket.close(
+                reason = f"Client '{client_id}' already connected"
+            )
+            return False
+        
+        self.client_websockets[client_id] = websocket
+        await websocket.accept()
+        return True
 
     def remove_client(self, client_id: str):
-        if self.is_open:
-            if client_id in self.client_websocket:
-                del self.client_websocket[client_id]
+        if client_id in self.client_websockets:
+            del self.client_websockets[client_id]
 
-    async def dispatch_event(self, client_id, event: EventObject):
-        if self.is_open:
-            for id in self.client_websocket:
-                if not id == client_id:
-                    client_websocket = self.client_websocket[id]
-                    await client_websocket.send_json(event)
+    async def disconnect_client(self, reason: str, client_id: str | None = None):
+        async def disconnect(id: str):
+            if id in self.client_websockets:
+                await self.client_websockets[id].close(reason = reason)
+                self.remove_client(id)
 
-    async def handle_state_event(self, client_id: str, event: PipeEvent):
-        if self.is_open:
-            if event['id'] == 'GET_STATE':
-                await self.client_websocket[client_id].send_json(
-                    ClientEvent(
-                        id = 'UPDATE_STATE',
-                        data = {'state': self.feature_state}
-                    )
-                )
+        if not client_id:
+            ids = list(self.client_websockets.keys())
+            for id in ids: await disconnect(id)
+        else: 
+            await disconnect(client_id)
 
-            if event['id'] == 'SET_STATE':
-                if 'data' in event:
-                    if 'state' in event['data']:
-                        self.feature_state.update(event['data']['state'])
-
-                await self.dispatch_event(client_id, ClientEvent(
-                    id = 'UPDATE_STATE',
-                    data = {'state': self.feature_state}
-                ))
-
-    def save_state(self):
-        if self.is_open:
-            with open(self.setting_file_path, 'r') as file:
-                setting_data: dict = json.load(file)
-
-            setting_data['state'] = self.feature_state
-
-            with open(self.setting_file_path, 'w') as file:
-                json.dump(setting_data, file, indent = 4)
-
-    async def handle_event(self, event: PipeEvent):
-        if self.is_open:
-            await self.handle_state_event(self.client_id, event)
-            if event['id'] == 'SAVE_STATE': self.save_state()
-
-            # await feature.pipe.broadcast_data(websocket, feature_name, data)
+    async def dispatch_event(self, event: ClientEvent, client_id: str | None = None):
+        for id, client_websocket in self.client_websockets.items():
+            if client_id and id == client_id: continue
+            await client_websocket.send_json(event)

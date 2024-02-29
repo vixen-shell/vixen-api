@@ -1,31 +1,36 @@
-import json
 from .FeatureSetting import FeatureSetting
 from .FrameHandler import FrameHandler
-from .FeaturePipe import FeaturePipe
+from .FeaturePipe import FeaturePipe, PipeEvent
+from .FeatureState import FeatureState
 
-class Feature:
-    def __init__(self, setting_file_path: str):
+class Feature(FeatureState, FeaturePipe):
+    def __init__(self, path: str):
+        feature_setting = FeatureSetting(path)
+
+        FeatureState.__init__(self, feature_setting.file)
+        FeaturePipe.__init__(self)
+
         self.is_started = False
-        self.setting_file_path = setting_file_path
-
-        with open(self.setting_file_path, 'r') as file:
-            setting_data: dict = json.load(file)
-
-        self.setting = FeatureSetting(setting_data)
+        self.setting = feature_setting
         self.frames = FrameHandler(self.setting.frames)
-        self.pipe = FeaturePipe(setting_data.get('state'), self.setting_file_path)
 
+    @property
+    def frame_ids(self):
+        return self.frames.frame_ids
+    
+    @property
+    def active_frame_ids(self):
+        return self.frames.active_frame_ids
+    
     def start(self):
         if not self.is_started:
-            self.pipe.open_pipe()
+            self.open_pipe()
             self.frames.init()
             self.is_started = True
 
     async def stop(self):
         if self.is_started:
-            await self.pipe.close_pipe(
-                f"Feature '{self.setting.feature_name}' stopped"
-            )
+            await self.close_pipe()
             self.frames.cleanup()
             self.is_started = False
 
@@ -37,10 +42,20 @@ class Feature:
     def close_frame(self, id: str):
         if self.is_started: self.frames.close(id)
 
-    @property
-    def frame_ids(self):
-        return self.frames.frame_ids
-    
-    @property
-    def active_frame_ids(self):
-        return self.frames.active_frame_ids
+    async def handle_pipe_events(self, event: PipeEvent, client_id: str):
+        if self.pipe_is_opened:
+            event_id = event['id']
+
+            if event_id == 'GET_STATE':
+                await self.handle_get_state_event(
+                    self.client_websockets[client_id]
+                )
+
+            if event_id == 'SET_STATE':
+                await self.handle_set_state_event(
+                    event.get('data', {}).get('state'),
+                    self.dispatch_event
+                )
+
+            if event_id == 'SAVE_STATE':
+                self.save_state()

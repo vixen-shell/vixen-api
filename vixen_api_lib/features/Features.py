@@ -2,7 +2,7 @@ import os
 from typing import List, Dict
 from fastapi import WebSocket
 from .Gtk_main_loop import Gtk_main_loop
-from .Feature import Feature, FeaturePipe
+from .Feature import Feature
 from ..globals import FEATURE_SETTINGS_DIRECTORY
 
 class Features:
@@ -49,25 +49,25 @@ class Features:
             return Features._features[feature_name]
     
     @staticmethod
-    async def connect_client_to_pipe(
+    async def connect_client(
         feature_name: str,
         client_id: str,
         websocket: WebSocket
-    ) -> FeaturePipe | None:
-        reason_for_closure = None
+    ) -> Feature | None:
+        reason = None
 
         if not Features.key_exists(feature_name):
-            reason_for_closure = f"Feature '{feature_name}' not found"
+            reason = f"Feature '{feature_name}' not found"
         else:
             feature = Features.get(feature_name)
-            if not feature.pipe.is_open:
-                reason_for_closure = f"Feature '{feature_name}' pipe is closed"
+            if not feature.pipe_is_opened:
+                reason = f"Feature '{feature_name}' pipe is closed"
 
-        if reason_for_closure:
+        if reason:
             await websocket.close(
-                reason = reason_for_closure
+                reason = reason
             )
-            return None
+            return
         
-        await feature.pipe.connect_client(client_id, websocket)
-        return feature.pipe
+        client_connected = await feature.connect_client(client_id, websocket)
+        if client_connected: return feature

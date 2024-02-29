@@ -1,5 +1,6 @@
 from typing import Dict
 from .frame_view import FrameSetting
+from ..globals import SettingFile
 
 class FrameSettingsDict(Dict[str, FrameSetting]):
     def __init__(self, feature_name: str, frames_data: list):
@@ -22,9 +23,10 @@ class FrameSettingsDict(Dict[str, FrameSetting]):
         return {id: setting for id, setting in self.items() if setting.instantiable}
 
 class FeatureSetting:
-    def __init__(self, feature_data: dict):
-        self.feature_name: str = feature_data['feature']
+    def __init__(self, path: str):
+        self.file = SettingFile(path)
+        self.feature_name: str = self.file.data['feature']
         self.frames: FrameSettingsDict = FrameSettingsDict(
             feature_name = self.feature_name,
-            frames_data = feature_data['frames']
+            frames_data = self.file.data['frames']
         )

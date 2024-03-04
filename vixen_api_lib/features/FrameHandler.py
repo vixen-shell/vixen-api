@@ -1,28 +1,32 @@
+import time
 from typing import Dict, List
 from .Gtk_imports import Gtk, GLib
-from .FeatureSetting import FrameSettingsDict
 from .frame_view import create_frame
+from .parameters import FeatureParams
 
 class SingleFrameHandler:
-    def __init__(self, frame_settings: FrameSettingsDict):
-        self.frame_settings = frame_settings.single_frame_settings
+    def __init__(self, feature_params: FeatureParams):
+        self.feature_name = feature_params.name
+        self.frames_params = feature_params.single_frames
         self.frames: Dict[str, Gtk.Window] = {}
 
     def init(self):
         def init_task():
-            for id in self.frame_settings:
-                frame = create_frame(self.frame_settings[id])
+            for id in self.frames_params:
+                frame = create_frame(self.feature_name, self.frames_params[id])
                 self.frames[id] = frame
 
         GLib.idle_add(init_task)
 
     def show(self, id: str):
         if id in self.frames:
+            if bool(self.frames_params[id].layer_frame): time.sleep(0.2)
             frame = self.frames[id]
             if not frame.get_visible(): frame.show_all()
 
     def hide(self, id: str):
         if id in self.frames:
+            if bool(self.frames_params[id].layer_frame): time.sleep(0.2)
             frame = self.frames[id]
             if frame.get_visible(): frame.hide()
 
@@ -33,21 +37,20 @@ class SingleFrameHandler:
 
     @property
     def frame_ids(self) -> List[str]:
-        return list(self.frame_settings.keys())
+        return list(self.frames_params.keys())
     
     @property
     def active_frame_ids(self) -> List[str]:
-        ids: List[str] = []
+        return [
+            id
+            for id, frame in self.frames.items()
+            if frame.get_visible()
+        ]
 
-        for id in self.frames:
-            if self.frames[id].get_visible():
-                ids.append(id)
-
-        return ids
-
-class InstanceFrameHandler:
-    def __init__(self, frame_settings: FrameSettingsDict):
-        self.frame_settings = frame_settings.instance_frame_settings
+class MultiFrameHandler:
+    def __init__(self, feature_params: FeatureParams):
+        self.feature_name = feature_params.name
+        self.frames_params = feature_params.multi_frames
         self.frames: Dict[str, Gtk.Window] = {}
         self.last_frame_indexes: Dict[str, int] = {}
 
@@ -65,9 +68,9 @@ class InstanceFrameHandler:
         frame_index = self.new_frame_index(frame_id)
         indexed_frame_id = f'{frame_id}_{frame_index}'
 
-        if frame_id in self.frame_settings and not indexed_frame_id in self.frames:
+        if frame_id in self.frames_params and not indexed_frame_id in self.frames:
             def process():
-                frame = create_frame(self.frame_settings[frame_id])
+                frame = create_frame(self.feature_name, self.frames_params[frame_id])
 
                 def on_delete_event(frame, event):
                     if indexed_frame_id in self.frames:
@@ -95,16 +98,16 @@ class InstanceFrameHandler:
 
     @property
     def frame_ids(self):
-        return list(self.frame_settings.keys())
+        return list(self.frames_params.keys())
 
     @property
     def active_frame_ids(self):
         return list(self.frames.keys())
 
 class FrameHandler:
-    def __init__(self, frame_settings: FrameSettingsDict):
-        self.single_frames = SingleFrameHandler(frame_settings)
-        self.instance_frames = InstanceFrameHandler(frame_settings)
+    def __init__(self, feature_params: FeatureParams):
+        self.single_frames = SingleFrameHandler(feature_params)
+        self.multi_frames = MultiFrameHandler(feature_params)
 
     def init(self):
         self.single_frames.init()
@@ -113,24 +116,24 @@ class FrameHandler:
         if id in self.single_frames.frame_ids:
             self.single_frames.show(id)
 
-        if id in self.instance_frames.frame_ids:
-            return self.instance_frames.open(id)
+        if id in self.multi_frames.frame_ids:
+            return self.multi_frames.open(id)
 
     def close(self, id: str):
         if id in self.single_frames.active_frame_ids:
             self.single_frames.hide(id)
         
-        if id in self.instance_frames.active_frame_ids:
-            self.instance_frames.close(id)
+        if id in self.multi_frames.active_frame_ids:
+            self.multi_frames.close(id)
 
     def cleanup(self):
         self.single_frames.cleanup()
-        self.instance_frames.cleanup()
+        self.multi_frames.cleanup()
 
     @property
     def frame_ids(self) -> List[str]:
-        return self.single_frames.frame_ids + self.instance_frames.frame_ids
+        return self.single_frames.frame_ids + self.multi_frames.frame_ids
     
     @property
     def active_frame_ids(self) -> List[str]:
-        return self.single_frames.active_frame_ids + self.instance_frames.active_frame_ids
+        return self.single_frames.active_frame_ids + self.multi_frames.active_frame_ids

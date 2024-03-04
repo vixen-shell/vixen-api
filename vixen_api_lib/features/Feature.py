@@ -1,18 +1,18 @@
-from .FeatureSetting import FeatureSetting
+from .parameters import FeatureParams
 from .FrameHandler import FrameHandler
 from .FeaturePipe import FeaturePipe, PipeEvent
 from .FeatureState import FeatureState
 
 class Feature(FeatureState, FeaturePipe):
     def __init__(self, path: str):
-        feature_setting = FeatureSetting(path)
+        params = FeatureParams.create(path)
 
-        FeatureState.__init__(self, feature_setting.file)
+        FeatureState.__init__(self, params)
         FeaturePipe.__init__(self)
 
         self.is_started = False
-        self.setting = feature_setting
-        self.frames = FrameHandler(self.setting.frames)
+        self.params = params
+        self.frames = FrameHandler(self.params)
 
     @property
     def frame_ids(self):

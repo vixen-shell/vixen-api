@@ -24,7 +24,7 @@ class Features:
 
         for setting_file_path in setting_file_paths:
             feature = Feature(setting_file_path)
-            Features._features[feature.setting.feature_name] = feature
+            Features._features[feature.params.name] = feature
 
     @staticmethod
     async def cleanup():

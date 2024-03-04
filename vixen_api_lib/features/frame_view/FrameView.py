@@ -1,31 +1,30 @@
-from .setting import FrameSetting
-from .utils import get_webview, layerise_frame
+from .webview import webview
+from .layerise_frame import layerise_frame
+from ..parameters import FrameParams
 from ..Gtk_imports import Gtk
 
-def create_frame(frame_setting: FrameSetting):
-    is_layer = True if frame_setting.layer else False
-
+def new_frame(is_layer: bool, feature_name: str, route: str):
     frame = Gtk.Window()
-    frame.set_title(frame_setting.title)
-    
-    frame.add(get_webview(
-        is_layer = is_layer,
-        feature = frame_setting.feature,
-        route = frame_setting.route
-    ))
+    frame.add(webview(is_layer, feature_name, route))
+    return frame
+
+def create_frame(feature_name: str, frame_params: FrameParams):
+    is_layer = bool(frame_params.layer_frame)
+    frame = new_frame(is_layer, feature_name, frame_params.route)
 
     if not is_layer:
-        if not frame_setting.instantiable:
+        frame.set_title(frame_params.name)
+
+        if frame_params.single_frame:
             def on_delete_event(frame, event):
                 frame.hide()
                 return True
             
             frame.connect('delete-event', on_delete_event)
+    else:
+        layerise_frame(frame, frame_params.name, frame_params.layer_frame)
 
-    if is_layer:
-        layerise_frame(frame, frame_setting.layer)
-
-    if frame_setting.instantiable or frame_setting.show_on_startup:
+    if not frame_params.single_frame or frame_params.show_on_startup:
         frame.show_all()
     
     return frame

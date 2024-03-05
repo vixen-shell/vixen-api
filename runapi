@@ -1,7 +1,13 @@
 #!./.venv/bin/python
 
-import os
+import os, argparse
 os.environ['GDK_BACKEND'] = 'wayland'
-
 from vixen_api_lib import api
-api.run()
+
+parser = argparse.ArgumentParser(description='Vixen Shell API')
+parser.add_argument('--dev', '-d', action='store_true', help='Front-end development mode')
+
+args = parser.parse_args()
+
+if args.dev: api.run(True)
+else: api.run()

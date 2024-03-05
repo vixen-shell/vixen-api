@@ -2,11 +2,11 @@ import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 
-from .features import Gtk_main_loop, Features
+from .globals import DevMode, get_front_url
+from .features import Features
 
 @asynccontextmanager
 async def lifespan(api: FastAPI):
-    Features.init()
     yield
     await Features.cleanup()
 
@@ -22,8 +22,11 @@ from . import frames_endpoints
 from . import features_websockets
 from . import hypr_websockets
 
-def run():
-    server.run()
+def run(dev_mode: bool = False):
+    if dev_mode:
+        DevMode.set(True)
+        print(f'DEV:      Front URL: {get_front_url()}')
+    if Features.init(): server.run()
 
 # from fastapi.middleware.cors import CORSMiddleware
 

@@ -1,30 +1,53 @@
-import os
+import os, sys
 from typing import List, Dict
 from fastapi import WebSocket
+from pydantic import ValidationError
 from .Gtk_main_loop import Gtk_main_loop
 from .Feature import Feature
+from .parameters import FeatureParams
 from ..globals import FEATURE_SETTINGS_DIRECTORY
 
 class Features:
     _features: Dict[str, Feature] = {}
 
     @staticmethod
+    def get_params_list() -> List[FeatureParams] | None:
+        params: List[FeatureParams] = []
+
+        try:
+            for file_name in os.listdir(FEATURE_SETTINGS_DIRECTORY):
+                if file_name.endswith('.json'):
+                    path = os.path.join(FEATURE_SETTINGS_DIRECTORY, file_name)
+
+                    if os.path.isfile(path):
+                        try:
+                            params.append(FeatureParams.create(path))
+                        except ValidationError as e:
+                            print(f"\nFile: '{path}'\n")
+                            print(e)
+                            print(f"\nFeature not initialized!\n")
+                            return
+        except FileNotFoundError as e:
+            print(e)
+            return
+        
+        return params
+
+    @staticmethod
     def init():
         Gtk_main_loop.run()
+        
+        params_list = Features.get_params_list()
 
-        directory = FEATURE_SETTINGS_DIRECTORY
-        setting_file_paths = []
+        if not params_list:
+            Gtk_main_loop.quit()
+            return False
 
-        for file_name in os.listdir(directory):
-            if file_name.endswith('.json'):
-                file_path = os.path.join(directory, file_name)
-
-                if os.path.isfile(file_path):
-                    setting_file_paths.append(file_path)
-
-        for setting_file_path in setting_file_paths:
-            feature = Feature(setting_file_path)
+        for params in params_list:
+            feature = Feature(params)
             Features._features[feature.params.name] = feature
+
+        return True
 
     @staticmethod
     async def cleanup():

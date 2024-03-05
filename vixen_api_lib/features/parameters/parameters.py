@@ -1,6 +1,6 @@
 import json
 from typing import Literal, Optional, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 def read_json(path: str) -> dict:
     with open(path, 'r', encoding = 'utf-8') as file:
@@ -33,10 +33,16 @@ class LayerFrameParams(BaseModel):
 
 class FrameParams(BaseModel):
     name: str
-    route: Optional[str] = None
-    single_frame: Optional[bool] = None
+    route: str
     show_on_startup: Optional[bool] = None
     layer_frame: Optional[LayerFrameParams] = None
+    multi_frame: Optional[bool] = None
+
+    @validator('multi_frame', pre = True)
+    def validate_multi_frame(cls, v, values):
+        if values.get('layer_frame') is not None and v is not None:
+            raise ValueError("A layer frame cannot be a multi frame")
+        return v
 
 class FeatureParams(BaseModel):
     path: str
@@ -62,7 +68,7 @@ class FeatureParams(BaseModel):
         return {
             key: frame
             for key, frame in self.frames.items()
-            if frame.single_frame
+            if not frame.multi_frame
         }
     
     @property
@@ -70,6 +76,6 @@ class FeatureParams(BaseModel):
         return {
             key: frame
             for key, frame in self.frames.items()
-            if not frame.single_frame
+            if frame.multi_frame
         }
 

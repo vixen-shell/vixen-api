@@ -1,7 +1,7 @@
 from fastapi import Response, Path
 from .api import api
 from .globals import ModelResponses, CommonsModels, FeatureModels, FrameModels
-from .features import Features
+from .features import Features, FrameParams
 
 # Frame IDs
 ids_responses = ModelResponses({
@@ -222,4 +222,42 @@ async def open_frame(
         feature = FeatureModels.FeatureBase(
             name = feature_name
         )
+    )
+
+# Frame Params
+params_responses = ModelResponses({
+    200: FrameParams,
+    404: CommonsModels.Error
+})
+
+@api.get(
+        '/frame/{feature_name}/params/{frame_id}',
+        description = 'Get a frame parameters',
+        responses = params_responses.responses
+)
+async def frame_params(
+    response: Response,
+    feature_name: str = Path(description = 'Feature name'),
+    frame_id: str = Path(description = 'Frame id')
+):
+    if not Features.key_exists(feature_name):
+        return params_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
+                key = feature_name
+            )
+        )
+    
+    feature = Features.get(feature_name)
+
+    if not frame_id in feature.frame_ids:
+        return params_responses(response, 404)(
+            message = f"Frame ID '{frame_id}' does not exist",
+            details = CommonsModels.KeyError(
+                key = frame_id
+            )
+        )
+    
+    return params_responses(response, 200)(
+        **feature.params.frames[frame_id].model_dump()
     )

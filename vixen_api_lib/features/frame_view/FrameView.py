@@ -15,7 +15,7 @@ def create_frame(feature_name: str, frame_params: FrameParams):
     if not is_layer:
         frame.set_title(frame_params.name)
 
-        if frame_params.single_frame:
+        if not frame_params.multi_frame:
             def on_delete_event(frame, event):
                 frame.hide()
                 return True
@@ -24,7 +24,7 @@ def create_frame(feature_name: str, frame_params: FrameParams):
     else:
         layerise_frame(frame, frame_params.name, frame_params.layer_frame)
 
-    if not frame_params.single_frame or frame_params.show_on_startup:
+    if frame_params.multi_frame or frame_params.show_on_startup:
         frame.show_all()
     
     return frame

@@ -6,7 +6,7 @@ Description       : Module for creating a Gtk webview.
 License           : GPL3
 """
 from ..Gtk_imports import Gdk, WebKit2
-from ...globals import FRONT_URL
+from ...globals import get_front_url
 
 def webview(
         is_layer: bool,
@@ -23,7 +23,7 @@ def webview(
     webview.set_settings(webKit_settings())
 
     route_param = f'&route={route}' if route else ''
-    webview.load_uri(f"{FRONT_URL}/?feature={feature_name}{route_param}")
+    webview.load_uri(f"{get_front_url()}/?feature={feature_name}{route_param}")
     
     if is_layer:
         webview.set_background_color(

@@ -4,9 +4,7 @@ from .FeaturePipe import FeaturePipe, PipeEvent
 from .FeatureState import FeatureState
 
 class Feature(FeatureState, FeaturePipe):
-    def __init__(self, path: str):
-        params = FeatureParams.create(path)
-
+    def __init__(self, params: FeatureParams):
         FeatureState.__init__(self, params)
         FeaturePipe.__init__(self)
 

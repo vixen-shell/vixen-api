@@ -3,14 +3,14 @@ from .layerise_frame import layerise_frame
 from ..parameters import FrameParams
 from ..Gtk_imports import Gtk
 
-def new_frame(is_layer: bool, feature_name: str, route: str):
+def new_frame(is_layer: bool, feature_name: str, route: str, client_id: str):
     frame = Gtk.Window()
-    frame.add(webview(is_layer, feature_name, route))
+    frame.add(webview(is_layer, feature_name, route, client_id))
     return frame
 
-def create_frame(feature_name: str, frame_params: FrameParams):
+def create_frame(feature_name: str, client_id: str, frame_params: FrameParams):
     is_layer = bool(frame_params.layer_frame)
-    frame = new_frame(is_layer, feature_name, frame_params.route)
+    frame = new_frame(is_layer, feature_name, frame_params.route, client_id)
 
     if not is_layer:
         frame.set_title(frame_params.name)

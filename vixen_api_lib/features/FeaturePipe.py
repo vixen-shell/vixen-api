@@ -1,24 +1,6 @@
 from fastapi import WebSocket
-from typing import Dict, Literal, TypedDict, Optional, Any
-
-class EventDataState(TypedDict):
-    state: Dict[str, str | int | bool]
-
-class EventObject(TypedDict):
-    id: str
-    data: Optional[Any]
-
-class PipeEvent(EventObject):
-    id: Literal['GET_STATE', 'SET_STATE', 'SAVE_STATE', 'CLOSE_PIPE']
-    data: Optional[
-        EventDataState
-    ]
-
-class ClientEvent(EventObject):
-    id: Literal['GET_STATE', 'UPDATE_STATE']
-    data: Optional[
-        EventDataState
-    ]
+from typing import Dict
+from .pipe_events import OutputEvent
 
 class FeaturePipe:
     def __init__(self):
@@ -67,7 +49,7 @@ class FeaturePipe:
         else: 
             await disconnect(client_id)
 
-    async def dispatch_event(self, event: ClientEvent, client_id: str | None = None):
+    async def dispatch_event(self, event: OutputEvent, client_id: str | None = None):
         for id, client_websocket in self.client_websockets.items():
             if client_id and id == client_id: continue
             await client_websocket.send_json(event)

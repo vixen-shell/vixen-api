@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Literal, Any
+from typing import Dict, List, Literal, Any
 
 class CommonsModels:
     class Error(BaseModel):
@@ -17,6 +17,9 @@ class FeatureModels:
     class FeatureBase(BaseModel):
         name: str
         is_started: bool = True
+
+    class FeatureState(FeatureBase):
+        state: Dict[str, None | str | int | float | bool]
 
 class FrameModels:
     class FrameIds(BaseModel):

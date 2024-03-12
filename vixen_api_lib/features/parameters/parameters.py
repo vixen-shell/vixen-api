@@ -48,7 +48,7 @@ class FeatureParams(BaseModel):
     path: str
     name: str
     frames: Dict[str, FrameParams]
-    state: Optional[Dict[str, str | int | float | bool]] = None
+    state: Optional[Dict[str, None | str | int | float | bool]] = None
 
     @staticmethod
     def create(path: str):

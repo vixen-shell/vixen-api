@@ -26,7 +26,7 @@ start_responses = ModelResponses({
 })
 
 @api.get(
-        '/feature/start/{feature_name}',
+        '/feature/{feature_name}/start',
         description = 'Start a feature',
         responses = start_responses.responses
 )
@@ -66,7 +66,7 @@ stop_responses = ModelResponses({
 })
 
 @api.get(
-        '/feature/stop/{feature_name}',
+        '/feature/{feature_name}/stop',
         description = 'Stop a feature',
         responses = stop_responses.responses
 )
@@ -98,4 +98,45 @@ async def unload_feature(
     return stop_responses(response, 200)(
         name = feature_name,
         is_started = False
+    )
+
+# STATE FEATURE
+state_responses = ModelResponses({
+    200: FeatureModels.FeatureState,
+    404: CommonsModels.Error,
+    409: CommonsModels.Error
+})
+
+@api.get(
+        '/feature/{feature_name}/state',
+        description = 'Get a feature state',
+        responses = state_responses.responses
+)
+async def state_feature(
+    response: Response,
+    feature_name: str = Path(description = 'Feature name')
+):
+    if not Features.key_exists(feature_name):
+        return state_responses(response, 404)(
+            message = f"Feature '{feature_name}' not found",
+            details = CommonsModels.KeyError(
+                key = feature_name
+            )
+        )
+    
+    feature = Features.get(feature_name)
+
+    if not feature.is_started:
+        return state_responses(response, 409)(
+            message = f"Feature '{feature_name}' is not started",
+            details = FeatureModels.FeatureBase(
+                name = feature_name,
+                is_started = False
+            )
+        )
+
+    return state_responses(response, 200)(
+        name = feature_name,
+        is_started = True,
+        state = feature.state
     )

@@ -1,6 +1,7 @@
 from .parameters import FeatureParams
 from .FrameHandler import FrameHandler
-from .FeaturePipe import FeaturePipe, PipeEvent
+from .FeaturePipe import FeaturePipe
+from .pipe_events import InputEvent
 from .FeatureState import FeatureState
 
 class Feature(FeatureState, FeaturePipe):
@@ -40,20 +41,6 @@ class Feature(FeatureState, FeaturePipe):
     def close_frame(self, id: str):
         if self.is_started: self.frames.close(id)
 
-    async def handle_pipe_events(self, event: PipeEvent, client_id: str):
+    async def handle_pipe_events(self, event: InputEvent, client_id: str):
         if self.pipe_is_opened:
-            event_id = event['id']
-
-            if event_id == 'GET_STATE':
-                await self.handle_get_state_event(
-                    self.client_websockets[client_id]
-                )
-
-            if event_id == 'SET_STATE':
-                await self.handle_set_state_event(
-                    event.get('data', {}).get('state'),
-                    self.dispatch_event
-                )
-
-            if event_id == 'SAVE_STATE':
-                self.save_state()
+            await self.handla_state_events(event, self.client_websockets[client_id], self.dispatch_event)

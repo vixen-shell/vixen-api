@@ -13,7 +13,7 @@ class SingleFrameHandler:
     def init(self):
         def init_task():
             for id in self.frames_params:
-                frame = create_frame(self.feature_name, self.frames_params[id])
+                frame = create_frame(self.feature_name, id, self.frames_params[id])
                 self.frames[id] = frame
 
         GLib.idle_add(init_task)
@@ -70,7 +70,7 @@ class MultiFrameHandler:
 
         if frame_id in self.frames_params and not indexed_frame_id in self.frames:
             def process():
-                frame = create_frame(self.feature_name, self.frames_params[frame_id])
+                frame = create_frame(self.feature_name, indexed_frame_id, self.frames_params[frame_id])
 
                 def on_delete_event(frame, event):
                     if indexed_frame_id in self.frames:

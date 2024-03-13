@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
+from .log import Logger
 
 origins = [
     "http://localhost:5173"
@@ -29,11 +30,12 @@ api.add_middleware(
 config = uvicorn.Config(api, host='localhost', port=6481)
 server = uvicorn.Server(config)
 
-@api.get('/ping')
+@api.get('/ping', description = 'Test API availability')
 async def ping():
-    return {'is_online': True}
+    return 'Vixen Shell API (1.0.0)'
 
 # ENDPOINTS
+from . import log_endpoints
 from . import features_endpoints
 from . import frames_endpoints
 
@@ -41,10 +43,13 @@ from . import frames_endpoints
 from . import features_websockets
 from . import hypr_websockets
 
+# LOGGER
+Logger.start()
+
 def run(dev_mode: bool = False):
     if dev_mode:
         DevMode.set(True)
-        print(f'DEV:      Front URL: {get_front_url()}')
+        Logger.log('INFO', f'Front URL: {get_front_url()} (dev mode)')
     if Features.init(): server.run()
     
 # from . import static_endpoints

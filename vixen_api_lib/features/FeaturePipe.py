@@ -1,6 +1,8 @@
 from fastapi import WebSocket
+from websockets import ConnectionClosedError
 from typing import Dict
 from .pipe_events import OutputEvent
+from ..log import Logger
 
 class FeaturePipe:
     def __init__(self):
@@ -50,6 +52,15 @@ class FeaturePipe:
             await disconnect(client_id)
 
     async def dispatch_event(self, event: OutputEvent, client_id: str | None = None):
-        for id, client_websocket in self.client_websockets.items():
+        ids = list(self.client_websockets.keys())
+
+        for id in ids:
             if client_id and id == client_id: continue
-            await client_websocket.send_json(event)
+            try: await self.client_websockets[id].send_json(event)
+            except ConnectionClosedError:
+                Logger.log(
+                    'WARNING',
+                    f"Aborting sending '{event['id']}' event: WebSocket client '{id}' closed."
+                )
+            except Exception as e:
+                Logger.log('ERROR', e)

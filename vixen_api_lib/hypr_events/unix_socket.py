@@ -1,4 +1,5 @@
 import asyncio
+from ..log import Logger
 
 class UnixSocket:
     def __init__(self, socket_path: str) -> None:
@@ -14,7 +15,7 @@ class UnixSocket:
                 self._is_connected = True
             return True
         except Exception as e:
-            print(e)
+            Logger.log('ERROR', f"Unable to access unix socket '{self._socket_path}'")
             return False
 
     async def close_connection(self) -> None:

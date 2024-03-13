@@ -1,4 +1,4 @@
-from typing import Callable, Coroutine, Any, Dict
+from typing import Callable, Coroutine, Any
 from fastapi import WebSocket
 from .pipe_events import InputEvent, OutputEvent
 from .parameters import FeatureParams
@@ -14,7 +14,7 @@ class FeatureState:
         self.feature_params.state = self.state
         self.feature_params.save()
     
-    async def handla_state_events(self, event: InputEvent, client_websocket: WebSocket, dispatcher: Dispatcher):
+    async def handle_state_events(self, event: InputEvent, client_websocket: WebSocket, dispatcher: Dispatcher):
         event_data = event.get('data')
 
         async def handle_get():

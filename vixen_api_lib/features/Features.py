@@ -1,4 +1,4 @@
-import os, sys
+import os
 from typing import List, Dict
 from fastapi import WebSocket
 from pydantic import ValidationError
@@ -6,6 +6,7 @@ from .Gtk_main_loop import Gtk_main_loop
 from .Feature import Feature
 from .parameters import FeatureParams
 from ..globals import FEATURE_SETTINGS_DIRECTORY
+from ..log import Logger
 
 class Features:
     _features: Dict[str, Feature] = {}
@@ -23,12 +24,13 @@ class Features:
                         try:
                             params.append(FeatureParams.create(path))
                         except ValidationError as e:
-                            print(f"\nFile: '{path}'\n")
-                            print(e)
-                            print(f"\nFeature not initialized!\n")
+                            error = e.errors()[0]
+                            Logger.log('WARNING', f"File: '{path}'")
+                            Logger.log('WARNING', f"{error['type']}: {error['loc']}, {error['msg']}")
+                            Logger.log('ERROR', "Feature not initialized!")
                             return
         except FileNotFoundError as e:
-            print(e)
+            Logger.log('ERROR', e)
             return
         
         return params

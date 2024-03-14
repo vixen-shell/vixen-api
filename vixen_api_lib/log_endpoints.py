@@ -1,5 +1,5 @@
 from fastapi import Response, Body
-from typing import Literal
+from typing import Literal, Optional, Dict
 from .api import api
 from .globals import ModelResponses, Models
 from .log import Logger
@@ -30,12 +30,14 @@ log_responses = ModelResponses({
 )
 async def post_log(
     response: Response,
-    level: Literal['INFO', 'WARNING', 'ERROR'] = Body(description = "Log's level"),
-    message: str = Body(description = "Log's message")
+    level: Optional[Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']] = Body(description = "Level log", default = 'INFO'),
+    purpose: str = Body(description = "Purpose log"),
+    data: Optional[Models.Log.LogData] = Body(description = "Optional data", default = None)
 ):
-    Logger.log(level, message)
+    Logger.log(level, purpose, data)
 
     return log_responses(response, 200)(
         level = level,
-        message = message
+        purpose = purpose,
+        data = data
     )

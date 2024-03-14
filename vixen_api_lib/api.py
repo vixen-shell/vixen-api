@@ -44,7 +44,7 @@ from . import features_websockets
 from . import hypr_websockets
 
 # LOGGER
-Logger.start()
+Logger.init()
 
 def run(dev_mode: bool = False):
     if dev_mode:

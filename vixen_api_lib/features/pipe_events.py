@@ -1,8 +1,5 @@
-from typing import TypedDict, Optional, Any, Literal
-
-class EventObject(TypedDict):
-    id: str
-    data: Optional[Any]
+from typing import TypedDict, Optional, Literal
+from ..log import LogLevel, LogData
 
 class EventData:
     class StateItem(TypedDict):
@@ -10,10 +7,11 @@ class EventData:
         value: None | str | int | float | bool
 
     class Log(TypedDict):
-        level: Optional[Literal['INFO', 'WARNING', 'ERROR']]
-        message: str
+        level: LogLevel
+        purpose: str
+        data: Optional[LogData]
 
-class InputEvent(EventObject):
+class InputEvent(TypedDict):
     id: Literal[
         'GET_STATE',
         'SET_STATE',
@@ -25,7 +23,7 @@ class InputEvent(EventObject):
         EventData.Log
     ]
 
-class OutputEvent(EventObject):
+class OutputEvent(TypedDict):
     id: Literal[
         'UPDATE_STATE',
         'LOG'

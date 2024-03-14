@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import Dict, List, Literal, Any
+from typing import Dict, List, Literal, Any, Optional
 
 # COMMONS MODELS
 class Commons_Error(BaseModel):
@@ -11,9 +11,15 @@ class Commons_KeyError(BaseModel):
     key: str
 
 # LOG MODELS
+class Log_LogData(BaseModel):
+    type: Literal['TEXT', 'DATA']
+    content: str | Dict[str, str | int | float | bool]
+    asset: Optional[str] = None
+
 class Log_Log(BaseModel):
-    level: Literal['INFO', 'WARNING', 'ERROR']
-    message: str
+    level: Literal['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+    purpose: str
+    data: Optional[Log_LogData] = None
 
 class Log_Logs(BaseModel):
         logs: List[Log_Log]

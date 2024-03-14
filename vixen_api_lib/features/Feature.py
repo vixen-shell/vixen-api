@@ -74,5 +74,7 @@ class Feature(FeatureState, FeaturePipe):
 
             if event_data:
                 level = event_data.get('level') or 'INFO'
-                message = event_data.get('message')
-                if message: Logger.log(level, message)
+                purpose = event_data.get('purpose')
+                data = event_data.get('data')
+                
+                if purpose: Logger.log(level, purpose, data)
